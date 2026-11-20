@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>김천다수초등학교 영어 쓰기 학습터</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;overflow-x:hidden;}
+
+/* INTRO */
+#introScreen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 20px;text-align:center;position:relative;z-index:10;}
+.intro-badge{font-size:5rem;margin-bottom:14px;animation:floatBadge 2s ease-in-out infinite;}
+@keyframes floatBadge{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.intro-school{font-size:clamp(1.5rem,4.5vw,2.2rem);font-weight:900;color:#fff;text-shadow:2px 2px 8px rgba(0,0,0,.3);margin-bottom:4px;}
+.intro-subtitle{font-size:clamp(1rem,3vw,1.4rem);font-weight:800;color:rgba(255,255,255,.9);margin-bottom:8px;}
+.intro-desc{font-size:.95rem;color:rgba(255,255,255,.7);margin-bottom:36px;}
+.intro-stars{font-size:1.4rem;letter-spacing:4px;margin-bottom:28px;}
+.intro-btn{padding:18px 56px;background:#FFD700;color:#333;border:none;border-radius:60px;font-family:'Nunito',sans-serif;font-size:1.6rem;font-weight:900;cursor:pointer;box-shadow:0 8px 30px rgba(0,0,0,.25);transition:transform .2s;touch-action:manipulation;}
+.intro-btn:active{transform:scale(.95);}
+
+/* MADE BY */
+.madeby{position:fixed;bottom:10px;right:14px;font-size:.95rem;color:rgba(255,255,255,.75);font-weight:900;z-index:300;pointer-events:none;text-shadow:1px 1px 4px rgba(0,0,0,.3);}
+
+/* MAIN */
+#mainApp{display:none;}
+.header{background:rgba(255,255,255,.15);backdrop-filter:blur(10px);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header h1{color:#fff;font-size:1rem;font-weight:900;text-shadow:1px 1px 4px rgba(0,0,0,.3);}
+.score-box{background:#FFD700;border-radius:20px;padding:5px 12px;font-size:.9rem;font-weight:900;color:#333;}
+.range-wrap{background:rgba(0,0,0,.15);padding:7px 12px;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;position:sticky;top:48px;z-index:99;}
+.range-wrap::-webkit-scrollbar{display:none;}
+.range-btn{display:inline-block;padding:5px 13px;margin-right:5px;border:2px solid rgba(255,255,255,.4);border-radius:20px;background:transparent;color:rgba(255,255,255,.85);font-family:'Nunito',sans-serif;font-size:.78rem;font-weight:800;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.range-btn.active{background:#FFD700;border-color:#FFD700;color:#333;}
+.nav{display:flex;gap:3px;padding:10px 8px 0;justify-content:center;}
+.nav button{flex:1;min-width:0;padding:8px 2px;border:none;border-radius:12px 12px 0 0;font-family:'Nunito',sans-serif;font-size:.68rem;font-weight:800;cursor:pointer;transition:all .3s;background:rgba(255,255,255,.2);color:#fff;}
+.nav button.active{background:#fff;color:#764ba2;box-shadow:0 -4px 12px rgba(0,0,0,.15);transform:translateY(-3px);}
+.card{background:#fff;border-radius:0 0 24px 24px;margin:0 10px 20px;padding:14px 12px;box-shadow:0 8px 32px rgba(0,0,0,.2);min-height:50vh;}
+.section{display:none;}
+.section.active{display:block;}
+
+/* NUM NAV */
+.num-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:8px;}
+.num-nav button{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:50%;width:40px;height:40px;font-size:1.2rem;font-weight:900;cursor:pointer;transition:transform .15s;touch-action:manipulation;}
+.num-nav button:active{transform:scale(.9);}
+.num-nav button:disabled{background:#ccc;cursor:not-allowed;}
+.num-display{font-size:2.8rem;font-weight:900;color:#764ba2;text-align:center;line-height:1;}
+.num-hint{font-size:.78rem;color:#bbb;font-weight:700;text-align:center;}
+
+/* CANVAS */
+.canvas-wrap{position:relative;width:100%;border-radius:14px;overflow:hidden;border:2px solid #e0e0e0;background:#fafafa;margin-bottom:8px;}
+canvas{display:block;width:100%;height:200px;touch-action:none;cursor:crosshair;}
+.canvas-toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px;align-items:center;min-height:38px;}
+.tool-btn{padding:7px 18px;border:2px solid #e74c3c;border-radius:20px;background:#fff;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;color:#e74c3c;cursor:pointer;touch-action:manipulation;}
+.tool-btn:active{background:#e74c3c;color:#fff;}
+
+.hint-btn{display:none;padding:7px 18px;border:2px solid #f39c12;border-radius:20px;background:#fff;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:800;color:#f39c12;cursor:pointer;touch-action:manipulation;animation:fadeInBtn .3s ease;}
+.hint-btn:active{background:#f39c12;color:#fff;}
+@keyframes fadeInBtn{from{opacity:0;transform:scale(0.9);}to{opacity:1;transform:scale(1);}}
+
+.check-btn{padding:7px 22px;border:none;border-radius:20px;background:linear-gradient(135deg,#27ae60,#2ecc71);font-family:'Nunito',sans-serif;font-size:.85rem;font-weight:900;color:#fff;cursor:pointer;touch-action:manipulation;box-shadow:0 4px 10px rgba(46,204,113,0.3);}
+.check-btn:active{transform:scale(0.95);}
+
+/* 양심 채점 버튼 그룹 */
+.judge-box{display:none;gap:10px;animation:fadeInBtn .3s ease;}
+.judge-btn{padding:7px 16px;border:none;border-radius:20px;font-family:'Nunito',sans-serif;font-size:.82rem;font-weight:900;color:#fff;cursor:pointer;touch-action:manipulation;box-shadow:0 4px 10px rgba(0,0,0,0.15);}
+.judge-btn.yes{background:linear-gradient(135deg,#42a5f5,#1e88e5);}
+.judge-btn.no{background:linear-gradient(135deg,#ff7043,#f4511e);}
+.judge-btn:active{transform:scale(0.95);}
+
+/* CHALLENGE */
+.ch-setup{text-align:center;}
+.ch-title{font-size:1.3rem;font-weight:900;color:#764ba2;margin-bottom:6px;}
+.ch-sub{font-size:.85rem;color:#777;margin-bottom:14px;}
+.nick-wrap{margin-bottom:16px;}
+.nick-wrap label{display:block;font-weight:800;color:#555;margin-bottom:5px;font-size:.88rem;}
+.nick-input{width:100%;max-width:260px;padding:10px 14px;border:3px solid #667eea;border-radius:50px;font-family:'Nunito',sans-serif;font-size:1rem;font-weight:700;text-align:center;outline:none;color:#333;}
+.diff-grid{display:grid;grid-template-columns:1fr;gap:8px;max-width:320px;margin:0 auto;}
+.diff-btn{padding:12px 16px;border:none;border-radius:14px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 12px rgba(0,0,0,.1);transition:transform .2s;touch-action:manipulation;}
+.diff-btn:active{transform:scale(.95);}
+.dinfo{font-size:.75rem;opacity:.9;background:rgba(0,0,0,.12);padding:3px 8px;border-radius:20px;}
+.d0{background:linear-gradient(135deg,#6BCB77,#27ae60);color:#fff}
+.d1{background:linear-gradient(135deg,#4D96FF,#2980b9);color:#fff}
+.d2{background:linear-gradient(135deg,#FFD700,#f39c12);color:#fff}
+.d3{background:linear-gradient(135deg,#FFA500,#e67e22);color:#fff}
+.d4{background:linear-gradient(135deg,#FF6B6B,#c0392b);color:#fff}
+
+/* CHALLENGE GAME */
+.ch-game{display:none;}
+.ch-hud{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:800;font-size:.82rem;color:#555;flex-wrap:wrap;gap:4px;}
+.ch-diff-badge{padding:3px 10px;border-radius:20px;color:#fff;font-size:.75rem;font-weight:800;}
+.timer-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.timer-bg{flex:1;background:#eee;border-radius:8px;height:12px;overflow:hidden;}
+.timer-fill{height:100%;border-radius:8px;background:#4CAF50;transition:width 1s linear,background .4s;}
+.timer-val{font-size:1.15rem;font-weight:900;color:#764ba2;min-width:36px;text-align:right;}
+.ch-number{font-size:3.8rem;font-weight:900;color:#764ba2;text-align:center;margin:6px 0 4px;}
+.ch-slots{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;min-height:52px;}
+.ch-slot{min-width:34px;height:44px;border-bottom:3px solid #667eea;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:900;color:#333;padding:0 3px;transition:all .2s;}
+.ch-slot.shown{color:#bbb;border-bottom-color:#ddd;}
+.ch-slot.filled{color:#27ae60;border-bottom-color:#27ae60;animation:slotPop .3s ease;}
+.ch-slot.active{border-bottom-color:#764ba2;background:rgba(102,126,234,.08);}
+@keyframes slotPop{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}
+.ch-cards{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin-top:4px;}
+.ch-card{width:44px;height:44px;border:none;border-radius:12px;font-family:'Nunito',sans-serif;font-size:1.25rem;font-weight:900;cursor:pointer;transition:all .2s;box-shadow:0 3px 10px rgba(0,0,0,.12);touch-action:manipulation;}
+.ch-card:active{transform:scale(.88);}
+.ch-card.used{opacity:0;pointer-events:none;transform:scale(.5);}
+.ch-card.wrong-shake{animation:wrongShake .35s ease;}
+@keyframes wrongShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+
+/* CHALLENGE RESULT */
+.ch-result{display:none;text-align:center;padding:10px 0;}
+.cr-emoji{font-size:3.5rem;}
+.cr-new{display:none;background:#FFD700;color:#333;padding:4px 14px;border-radius:20px;font-size:.85rem;font-weight:900;margin:6px auto;width:fit-content;}
+.cr-title{font-size:1.4rem;font-weight:900;color:#764ba2;margin:6px 0 4px;}
+.cr-sub{font-size:.9rem;color:#555;margin-bottom:12px;}
+.cr-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.cr-btn{padding:10px 20px;border:none;border-radius:50px;font-family:'Nunito',sans-serif;font-size:.9rem;font-weight:900;cursor:pointer;touch-action:manipulation;}
+.cr-btn.pri{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;}
+.cr-btn.sec{background:#f0e6ff;color:#764ba2;}
+
+/* LEADERBOARD */
+.lb-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.lb-title{font-size:1.15rem;font-weight:900;color:#764ba2;}
+.lb-refresh{padding:5px 12px;border:2px solid #27ae60;border-radius:20px;background:#fff;font-family:'Nunito',sans-serif;font-size:.75rem;font-weight:800;color:#27ae60;cursor:pointer;}
+.lb-filter{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.lb-filter button{padding:5px 9px;border:2px solid #667eea;border-radius:20px;background:#fff;font-family:'Nunito',sans-serif;font-size:.7rem;font-weight:800;color:#667eea;cursor:pointer;}
+.lb-filter button.active{background:#667eea;color:#fff;}
+.lb-table{width:100%;border-collapse:collapse;font-size:.78rem;}
+.lb-table th{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:8px 5px;}
+.lb-table th:first-child{border-radius:10px 0 0 0;}
+.lb-table th:last-child{border-radius:0 10px 0 0;}
+.lb-table td{padding:8px 5px;text-align:center;border-bottom:1px solid #f0f0f0;font-weight:700;}
+.lb-table tr:nth-child(even) td{background:#f9f6ff;}
+.lb-table tr.gold td{background:#FFFDE7;}
+.lb-table tr.silver td{background:#F5F5F5;}
+.lb-table tr.bronze td{background:#FFF3E0;}
+.lb-empty{text-align:center;color:#bbb;padding:24px;font-weight:700;font-size:.9rem;}
+.fb-notice{background:#FFF3E0;border:2px solid #FF9800;border-radius:12px;padding:10px;margin-bottom:12px;font-size:.78rem;font-weight:700;color:#e65100;line-height:1.6;text-align:center;}
+</style>
+</head>
+<body>
+
+<div class="madeby">✏️ Made by 강경진</div>
+
+<div id="introScreen">
+  <div class="intro-badge">✏️</div>
+  <div class="intro-school">김천다수초등학교</div>
+  <div class="intro-subtitle">영어 쓰기 학습터</div>
+  <div class="intro-desc">숫자를 영어로 써보자! 1 ~ 100 📝</div>
+  <div class="intro-stars">⭐ ⭐ ⭐ ⭐ ⭐</div>
+  <button class="intro-btn" id="startBtn">시작! 🚀</button>
+</div>
+
+<div id="mainApp">
+  <div class="header">
+    <h1>✏️ 김천다수초 영어 쓰기 학습터</h1>
+    <div class="score-box">⭐ <span id="totalScore">0</span></div>
+  </div>
+  <div class="range-wrap" id="rangeWrap"></div>
+  <div class="nav">
+    <button class="active" id="navTrace" onclick="showSec('trace')">✍️ 따라쓰기</button>
+    <button id="navFill"  onclick="showSec('fill')">⬜ 빈칸채우기</button>
+    <button id="navWrite" onclick="showSec('write')">🔢 숫자보고쓰기</button>
+    <button id="navChallenge" onclick="showSec('challenge')">🏆 도전!</button>
+    <button id="navLb"    onclick="showSec('lb')">📊 순위표</button>
+  </div>
+  <div class="card">
+
+    <div id="trace" class="section active">
+      <div class="num-nav">
+        <button onclick="traceNav(-1)">◀</button>
+        <div>
+          <div class="num-display" id="traceNum">1</div>
+          <div class="num-hint" id="traceHint">ONE</div>
+        </div>
+        <button onclick="traceNav(1)">▶</button>
+      </div>
+      <p style="text-align:center;font-size:.8rem;color:#999;font-weight:700;margin-bottom:6px;">회색 글자 위를 펜으로 따라 써보세요 ✏️</p>
+      <div class="canvas-wrap"><canvas id="traceCanvas"></canvas></div>
+      <div class="canvas-toolbar"><button class="tool-btn" onclick="clearCvs('trace')">🗑️ 지우기</button></div>
+    </div>
+
+    <div id="fill" class="section">
+      <div class="num-nav">
+        <div>
+          <div class="num-display" id="fillNum">1</div>
+          <div class="num-hint" id="fillHint"></div>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:.8rem;color:#999;font-weight:700;margin-bottom:6px;">빈 밑줄에 알맞은 알파벳을 써보세요 ✏️</p>
+      <div class="canvas-wrap"><canvas id="fillCanvas"></canvas></div>
+      <div class="canvas-toolbar">
+        <button class="hint-btn" id="fillHintBtn" onclick="showHint('fill')">💡 힌트보기</button>
+        <button class="tool-btn" id="fillClearBtn" onclick="clearCvs('fill')">🗑️ 지우기</button>
+        <button class="check-btn" id="fillCheckBtn" onclick="checkAnswer('fill')">✅ 정답확인</button>
+        
+        <div class="judge-box" id="fillJudgeBox">
+          <button class="judge-btn yes" onclick="handleJudge('fill', true)">⭕ 맞아요 (+10)</button>
+          <button class="judge-btn no" onclick="handleJudge('fill', false)">❌ 다시 쓸래요</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="write" class="section">
+      <div class="num-nav">
+        <div style="text-align:center">
+          <div style="font-size:4.5rem;font-weight:900;color:#764ba2;line-height:1.1" id="writeBigNum">1</div>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:.8rem;color:#999;font-weight:700;margin-bottom:6px;">밑줄 위에 영어로 숫자를 써보세요 ✏️</p>
+      <div class="canvas-wrap"><canvas id="writeCanvas"></canvas></div>
+      <div class="canvas-toolbar">
+        <button class="tool-btn" id="writeClearBtn" onclick="clearCvs('write')">🗑️ 지우기</button>
+        <button class="check-btn" id="writeCheckBtn" onclick="checkAnswer('write')">✅ 정답확인</button>
+        
+        <div class="judge-box" id="writeJudgeBox">
+          <button class="judge-btn yes" onclick="handleJudge('write', true)">⭕ 맞아요 (+10)</button>
+          <button class="judge-btn no" onclick="handleJudge('write', false)">❌ 다시 쓸래요</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="challenge" class="section">
+      <div class="ch-setup" id="chSetup">
+        <div class="ch-title">🏆 도전! 숫자 철자 맞추기</div>
+        <div class="ch-sub">별명을 쓰고 난이도를 선택해요 🎮</div>
+        <div class="nick-wrap">
+          <label>✏️ 별명을 적어주세요</label>
+          <input type="text" id="chNick" class="nick-input" placeholder="별명 입력 (최대 8자)" maxlength="8">
+        </div>
+        <div class="diff-grid">
+          <button class="diff-btn d0" onclick="startCh(0)"><span>🌱 매우 쉬움</span><span class="dinfo">1칸·4카드·60초·5문제</span></button>
+          <button class="diff-btn d1" onclick="startCh(1)"><span>🌿 쉬움</span><span class="dinfo">2칸·6카드·55초·6문제</span></button>
+          <button class="diff-btn d2" onclick="startCh(2)"><span>🌟 보통</span><span class="dinfo">절반빈칸·8카드·45초·7문제</span></button>
+          <button class="diff-btn d3" onclick="startCh(3)"><span>🔥 어려움</span><span class="dinfo">전체빈칸·10카드·40초·8문제</span></button>
+          <button class="diff-btn d4" onclick="startCh(4)"><span>💀 매우 어려움</span><span class="dinfo">전체빈칸·12카드·30초·10문제</span></button>
+        </div>
+      </div>
+      <div class="ch-game" id="chGame">
+        <div class="ch-hud">
+          <span id="chHudName"></span>
+          <span id="chHudDiff" class="ch-diff-badge"></span>
+          <span id="chHudProg"></span>
+        </div>
+        <div class="timer-row">
+          <div class="timer-bg"><div class="timer-fill" id="chTimerFill" style="width:100%"></div></div>
+          <div class="timer-val" id="chTimerVal">60</div>
+        </div>
+        <div class="ch-number" id="chBigNum"></div>
+        <div class="ch-slots" id="chSlots"></div>
+        <div class="ch-cards" id="chCards"></div>
+      </div>
+      <div class="ch-result" id="chResult">
+        <div class="cr-emoji" id="crEmoji"></div>
+        <div class="cr-new" id="crNew">🎉 최고 기록 갱신!</div>
+        <div class="cr-title" id="crTitle"></div>
+        <div class="cr-sub" id="crSub"></div>
+        <div class="cr-btns">
+          <button class="cr-btn sec" onclick="backChSetup()">🎮 다시 선택</button>
+          <button class="cr-btn pri" onclick="showSec('lb')">📊 순위표 보기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="lb" class="section">
+      <div class="fb-notice" id="fbNotice">⚠️ Firebase 연결 후 모든 친구 기록을 함께 볼 수 있어요!</div>
+      <div class="lb-top">
+        <div class="lb-title">📊 순위표</div>
+        <button class="lb-refresh" onclick="refreshLB()">🔄 새로고침</button>
+      </div>
+      <div class="lb-filter" id="lbFilterWrap">
+        <button class="active" onclick="lbFlt(event,'all')">전체</button>
+        <button onclick="lbFlt(event,'0')">🌱 매우쉬움</button>
+        <button onclick="lbFlt(event,'1')">🌿 쉬움</button>
+        <button onclick="lbFlt(event,'2')">🌟 보통</button>
+        <button onclick="lbFlt(event,'3')">🔥 어려움</button>
+        <button onclick="lbFlt(event,'4')">💀 매우어려움</button>
+      </div>
+      <div id="lbContent"><div class="lb-empty">⏳ 불러오는 중...</div></div>
+    </div>
+
+  </div></div><script>
+// ══ FIREBASE ══
+var firebaseConfig = {
+  apiKey:"여기에_apiKey_붙여넣기",
+  authDomain:"여기에_authDomain_붙여넣기",
+  databaseURL:"여기에_databaseURL_붙여넣기",
+  projectId:"여기에_projectId_붙여넣기",
+  storageBucket:"여기에_storageBucket_붙여넣기",
+  messagingSenderId:"여기에_messagingSenderId_붙여넣기",
+  appId:"여기에_appId_붙여넣기"
+};
+var db = null, fbReady = false;
+try {
+  if (!firebaseConfig.databaseURL.includes("여기에")) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database(); fbReady = true;
+    document.getElementById('fbNotice').style.display = 'none';
+  }
+} catch(e) { console.warn("Firebase:", e); }
+
+// ══ DATA ══
+function n2e(n) {
+  var ones = ['','ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT','NINE',
+    'TEN','ELEVEN','TWELVE','THIRTEEN','FOURTEEN','FIFTEEN','SIXTEEN',
+    'SEVENTEEN','EIGHTEEN','NINETEEN'];
+  var tens = ['','','TWENTY','THIRTY','FORTY','FIFTY','SIXTY','SEVENTY','EIGHTY','NINETY'];
+  if (n === 100) return 'ONE HUNDRED';
+  if (n < 20) return ones[n];
+  var t = Math.floor(n/10), o = n%10;
+  return o === 0 ? tens[t] : tens[t] + '-' + ones[o];
+}
+var ALL = [];
+for (var i = 1; i <= 100; i++) ALL.push({n:i, w:n2e(i)});
+var RANGE_LBL = ['1~10','11~20','21~30','31~40','41~50','51~60','61~70','71~80','81~90','91~100'];
+var CARD_COLS = ['#FFE0E0','#FFE8CC','#FFFACC','#E0F5E0','#E0EEFF','#F0E0FF','#FFE8E0','#E0FFF8','#FFFDE0','#FFE0F0','#fce4ec','#e8f5e9','#fff9c4','#e3f2fd','#f3e5f5','#e0f7fa'];
+function shuffle(a) { return a.slice().sort(function(){return Math.random()-.5;}); }
+function sanitizeKey(n) { return n.replace(/[.#$\[\]\/\s]/g,'_').substring(0,20) || 'player'; }
+
+var rangeIdx = 0, curNums = ALL.slice(0,10);
+var traceIdx = 0, fillIdx = 0, writeIdx = 0;
+var totalScore = 0;
+var lbCurFilter = 'all';
+var TABS = ['trace','fill','write','challenge','lb'];
+var NAV_IDS = ['navTrace','navFill','navWrite','navChallenge','navLb'];
+
+var fillHintTimer = null;
+var writeHintTimer = null;
+
+var fillState = { passed: false, hintLevel: 0 };
+var writeState = { passed: false, hintLevel: 0 };
+
+// 실시간 터치 필기 선 데이터 리스트
+var fillLines = [];
+var writeLines = [];
+
+// 문제 고정용 랜덤 상태 저장 변수 추가
+var cachedFillParams = {};
+
+// ══ START APP ══
+document.getElementById('startBtn').addEventListener('click', function() {
+  document.getElementById('introScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display = 'block';
+  buildRange();
+  
+  setTimeout(function() {
+    initCvs('trace', gTrace(curNums[traceIdx].w));
+    initCvs('fill',  buildFillGuideFn(fillIdx)); startHintTimer('fill');
+    initCvs('write', gWrite(curNums[writeIdx].w));
+    loadLB(document.getElementById('lbContent'), lbCurFilter);
+  }, 100);
+});
+
+window.addEventListener('resize', function() {
+  var sec = document.querySelector('.section.active');
+  if (!sec) return;
+  if (sec.id === 'trace') initCvs('trace', gTrace(curNums[traceIdx].w));
+  else if (sec.id === 'fill') { initCvs('fill', buildFillGuideFn(fillIdx, true)); redrawUserLines('fill'); }
+  else if (sec.id === 'write') { initCvs('write', gWrite(curNums[writeIdx].w)); redrawUserLines('write'); }
+});
+
+// ══ RANGE ══
+function buildRange() {
+  var wrap = document.getElementById('rangeWrap'); wrap.innerHTML = '';
+  RANGE_LBL.forEach(function(l, i) {
+    var b = document.createElement('button');
+    b.className = 'range-btn' + (i===0?' active':'');
+    b.textContent = l;
+    b.onclick = function(){ selectRange(i); };
+    wrap.appendChild(b);
+  });
+}
+function selectRange(idx) {
+  rangeIdx = idx; curNums = ALL.slice(idx*10, idx*10+10);
+  document.querySelectorAll('.range-btn').forEach(function(b,i){ b.classList.toggle('active', i===idx); });
+  traceIdx = fillIdx = writeIdx = 0;
+  
+  cachedFillParams = {}; // 범위 변경 시 문제 저장 캐시 클리어
+  resetUIState('fill');
+  resetUIState('write');
+  
+  var sec = document.querySelector('.section.active');
+  if (!sec) return;
+  if (sec.id==='trace') refreshTrace();
+  else if (sec.id==='fill') refreshFill();
+  else if (sec.id==='write') refreshWrite();
+}
+
+// ══ SECTIONS ══
+function showSec(id) {
+  document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+  TABS.forEach(function(t,i){ document.getElementById(NAV_IDS[i]).classList.toggle('active', t===id); });
+  document.getElementById(id).classList.add('active');
+  
+  if (id==='trace')     { setTimeout(function(){ initCvs('trace', gTrace(curNums[traceIdx].w)); refreshTrace(); }, 50); }
+  else if (id==='fill') { setTimeout(function(){ initCvs('fill', buildFillGuideFn(fillIdx, true)); redrawUserLines('fill'); }, 50); }
+  else if (id==='write'){ setTimeout(function(){ initCvs('write', gWrite(curNums[writeIdx].w)); redrawUserLines('write'); }, 50); }
+  else if (id==='lb')   { refreshLB(); }
+}
+
+function resetUIState(type) {
+  if (type === 'fill') {
+    fillState.passed = false; fillState.hintLevel = 0; fillLines = [];
+    document.getElementById('fillCheckBtn').style.display = 'inline-block';
+    document.getElementById('fillClearBtn').style.display = 'inline-block';
+    document.getElementById('fillJudgeBox').style.display = 'none';
+  } else if (type === 'write') {
+    writeState.passed = false; writeState.hintLevel = 0; writeLines = [];
+    document.getElementById('writeCheckBtn').style.display = 'inline-block';
+    document.getElementById('writeClearBtn').style.display = 'inline-block';
+    document.getElementById('writeJudgeBox').style.display = 'none';
+  }
+}
+
+// ══ CANVAS ENGINE ══
+var CVS = {};
+function initCvs(id, guideFn) {
+  var el = document.getElementById(id + 'Canvas');
+  if (!el) return;
+  var dpr = window.devicePixelRatio || 1;
+  var w = el.parentElement.offsetWidth || 300;
+  var h = 200;
+  el.style.height = h + 'px';
+  el.style.width = '100%';
+  el.width  = Math.round(w * dpr);
+  el.height = Math.round(h * dpr);
+  var ctx = el.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  CVS[id] = {el:el, ctx:ctx, w:w, h:h, dpr:dpr, guideFn:guideFn, drawing:false};
+  if (guideFn) guideFn(ctx, w, h);
+  attachPointer(id);
+}
+
+function attachPointer(id) {
+  var c = CVS[id]; if (!c) return; var el = c.el;
+  if (el._bound) {
+    el.removeEventListener('pointerdown', el._bound.down);
+    el.removeEventListener('pointermove', el._bound.move);
+    el.removeEventListener('pointerup',   el._bound.up);
+    el.removeEventListener('pointercancel',el._bound.up);
+  }
+  
+  var currentLine = null;
+
+  el._bound = {
+    down: function(e) {
+      if ((id==='fill'&&fillState.passed) || (id==='write'&&writeState.passed)) return; 
+      c.drawing = true;
+      try { el.setPointerCapture(e.pointerId); } catch(x) {}
+      var p = cpos(el, e);
+      c.ctx.beginPath(); c.ctx.moveTo(p.x, p.y);
+      currentLine = [{x: p.x, y: p.y}];
+      e.preventDefault();
+    },
+    move: function(e) {
+      if (!c.drawing) return;
+      var p = cpos(el, e);
+      c.ctx.lineWidth = 6;
+      c.ctx.strokeStyle = '#1a1a1a';
+      c.ctx.lineTo(p.x, p.y); c.ctx.stroke();
+      c.ctx.beginPath(); c.ctx.moveTo(p.x, p.y);
+      if(currentLine) currentLine.push({x: p.x, y: p.y});
+      e.preventDefault();
+    },
+    up: function(e) { 
+      if(c.drawing && currentLine && currentLine.length > 0) {
+        if(id === 'fill') fillLines.push(currentLine);
+        if(id === 'write') writeLines.push(currentLine);
+      }
+      c.drawing = false; 
+      currentLine = null;
+      e.preventDefault(); 
+    }
+  };
+  el.style.touchAction = 'none';
+  el.addEventListener('pointerdown',   el._bound.down);
+  el.addEventListener('pointermove',   el._bound.move);
+  el.addEventListener('pointerup',     el._bound.up);
+  el.addEventListener('pointercancel', el._bound.up);
+}
+
+function cpos(el, e) {
+  var r = el.getBoundingClientRect();
+  return {x: e.clientX - r.left, y: e.clientY - r.top};
+}
+
+function clearCvs(id) {
+  var c = CVS[id]; if (!c) return;
+  if(id === 'fill') fillLines = [];
+  if(id === 'write') writeLines = [];
+  c.ctx.clearRect(0,0,c.w,c.h);
+  if (c.guideFn) c.guideFn(c.ctx, c.w, c.h);
+}
+
+function reGuide(id, guideFn) {
+  var c = CVS[id];
+  if (!c) { initCvs(id, guideFn); return; }
+  c.guideFn = guideFn;
+  c.ctx.clearRect(0,0,c.w,c.h);
+  if (guideFn) guideFn(c.ctx, c.w, c.h);
+}
+
+function redrawUserLines(id) {
+  var c = CVS[id]; if(!c) return;
+  var lines = (id === 'fill') ? fillLines : writeLines;
+  c.ctx.save();
+  c.ctx.lineWidth = 6;
+  c.ctx.strokeStyle = '#1a1a1a';
+  c.ctx.lineCap = 'round'; c.ctx.lineJoin = 'round';
+  lines.forEach(function(line){
+    if(line.length < 1) return;
+    c.ctx.beginPath();
+    c.ctx.moveTo(line[0].x, line[0].y);
+    for(var idx=1; idx<line.length; idx++) {
+      c.ctx.lineTo(line[idx].x, line[idx].y);
+    }
+    c.ctx.stroke();
+  });
+  c.ctx.restore();
+}
+
+// ══ GUIDE DRAW FUNCTIONS ══
+function gTrace(word) {
+  return function(ctx, w, h) {
+    ctx.clearRect(0,0,w,h);
+    ctx.save(); ctx.setLineDash([5,5]); ctx.strokeStyle='#ececec'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(16,h*.74); ctx.lineTo(w-16,h*.74); ctx.stroke();
+    ctx.restore();
+    var fs = Math.min(h*.52, (w / word.length) * 1.05, 88);
+    ctx.font = '900 '+fs+'px "Nunito",Arial';
+    ctx.fillStyle = '#d8d8d8';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(word, w/2, h*.74);
+  };
+}
+
+function gFill(word, shownIdxs, clueIdxs, isPassed) {
+  return function(ctx, w, h) {
+    ctx.save();
+    var lw = w / word.length;
+    var fs = Math.min(h*.46, lw*.78, 76);
+    var baseY = h*.72;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.font = '900 '+fs+'px "Nunito",Arial';
+
+    for (var i = 0; i < word.length; i++) {
+      var ch = word[i]; var cx = lw*i + lw/2;
+      if (shownIdxs.indexOf(i) >= 0) {
+        ctx.fillStyle = '#c8c8c8';
+        ctx.fillText(ch, cx, baseY);
+      } else if (isPassed) {
+        ctx.fillStyle = '#2ecc71'; 
+        ctx.fillText(ch, cx, baseY);
+      } else if (clueIdxs && clueIdxs.indexOf(i) >= 0) {
+        ctx.fillStyle = '#e0e0e0';
+        ctx.fillText(ch, cx, baseY);
+      } else {
+        ctx.strokeStyle='#c0c0c0'; ctx.lineWidth=2.5;
+        ctx.beginPath(); ctx.moveTo(lw*i+lw*.08, baseY+8); ctx.lineTo(lw*(i+1)-lw*.08, baseY+8); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  };
+}
+
+function gWrite(word, clueIdxs, isPassed) {
+  return function(ctx, w, h) {
+    ctx.save();
+    var baseY = h*.72; var lw = w / word.length;
+    var fs = Math.min(h*.46, lw*.78, 76);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.font = '900 '+fs+'px "Nunito",Arial';
+
+    if (isPassed) {
+      ctx.fillStyle = '#2ecc71';
+      for (var i = 0; i < word.length; i++) {
+        if (word[i] !== '-') ctx.fillText(word[i], lw*i + lw/2, baseY);
+      }
+    } else if (clueIdxs && clueIdxs.length > 0) {
+      ctx.fillStyle = '#e8e8e8';
+      for (var i = 0; i < word.length; i++) {
+        if (clueIdxs.indexOf(i) >= 0) {
+          ctx.fillText(word[i], lw*i + lw/2, baseY);
+        }
+      }
+    }
+    
+    ctx.strokeStyle='#bbbbbb'; ctx.lineWidth=2.5;
+    for (var i = 0; i < word.length; i++) {
+      if (word[i] === '-') continue;
+      ctx.beginPath(); ctx.moveTo(lw*i+lw*.06, baseY+8); ctx.lineTo(lw*(i+1)-lw*.06, baseY+8); ctx.stroke();
+    }
+    ctx.restore();
+  };
+}
+
+function startHintTimer(type) {
+  if (type !== 'fill') return; 
+  var btn = document.getElementById('fillHintBtn');
+  if(btn) btn.style.display = 'none';
+  clearTimeout(fillHintTimer);
+  fillHintTimer = setTimeout(function(){ if(btn && !fillState.passed) btn.style.display = 'inline-block'; }, 5000);
+}
+
+// ══ TRACE ══
+function refreshTrace() {
+  var d = curNums[traceIdx];
+  document.getElementById('traceNum').textContent = d.n;
+  document.getElementById('traceHint').textContent = d.w;
+  reGuide('trace', gTrace(d.w));
+}
+function traceNav(dir) { traceIdx = (traceIdx+dir+curNums.length)%curNums.length; refreshTrace(); }
+
+// ══ FILL ══
+var fillSavedBlanks = []; 
+function buildFillGuideFn(idx, keepSameProblem) {
+  var word = curNums[idx].w;
+  
+  // 다시 쓸래요 시 기존에 뚫려있던 빈칸 위치가 유지되도록 예외 처리 캐싱
+  if (keepSameProblem && cachedFillParams[idx]) {
+    var cached = cachedFillParams[idx];
+    fillSavedBlanks = cached.fillSavedBlanks;
+    var clueIdxs = fillSavedBlanks.slice(0, fillState.hintLevel);
+    return gFill(word, cached.shownIdxs, clueIdxs, fillState.passed);
+  }
+
+  var allIdxs = [];
+  for (var i=0;i<word.length;i++) { if(word[i]!=='-') allIdxs.push(i); }
+  var kept = Math.max(1, Math.floor(allIdxs.length/2));
+  var shuffled = shuffle(allIdxs);
+  var shownIdxs = shuffled.slice(0, kept);
+  fillSavedBlanks = shuffled.slice(kept);
+  
+  // 현재 문제의 난이도 파라미터 캐시 저장
+  cachedFillParams[idx] = { shownIdxs: shownIdxs, fillSavedBlanks: fillSavedBlanks };
+  
+  var blankN = allIdxs.length - shownIdxs.length;
+  document.getElementById('fillHint').textContent = '빈칸: '+blankN+'개';
+  var clueIdxs = fillSavedBlanks.slice(0, fillState.hintLevel);
+  return gFill(word, shownIdxs, clueIdxs, fillState.passed);
+}
+function refreshFill() {
+  var d = curNums[fillIdx];
+  document.getElementById('fillNum').textContent = d.n;
+  reGuide('fill', buildFillGuideFn(fillIdx, false));
+  startHintTimer('fill');
+}
+
+// ══ WRITE ══
+var writeSavedBlanks = [];
+function refreshWrite() {
+  var d = curNums[writeIdx];
+  document.getElementById('writeBigNum').textContent = d.n;
+  writeSavedBlanks = [];
+  for(var i=0; i<d.w.length; i++) {
+    if(d.w[i] !== '-') writeSavedBlanks.push(i);
+  }
+  var clueIdxs = writeSavedBlanks.slice(0, writeState.hintLevel);
+  reGuide('write', gWrite(d.w, clueIdxs, writeState.passed));
+}
+
+// ══ CHECK ANSWER & JUDGE ══
+function checkAnswer(type) {
+  if (type === 'fill') {
+    if (fillState.passed) return;
+    fillState.passed = true;
+    
+    document.getElementById('fillHintBtn').style.display = 'none';
+    document.getElementById('fillCheckBtn').style.display = 'none';
+    document.getElementById('fillClearBtn').style.display = 'none';
+    
+    reGuide('fill', buildFillGuideFn(fillIdx, true));
+    redrawUserLines('fill');
+    
+    document.getElementById('fillJudgeBox').style.display = 'flex';
+    
+  } else if (type === 'write') {
+    if (writeState.passed) return;
+    writeState.passed = true;
+    
+    document.getElementById('writeCheckBtn').style.display = 'none';
+    document.getElementById('writeClearBtn').style.display = 'none';
+    
+    var d = curNums[writeIdx];
+    var clueIdxs = writeSavedBlanks.slice(0, writeState.hintLevel);
+    reGuide('write', gWrite(d.w, clueIdxs, writeState.passed));
+    redrawUserLines('write');
+    
+    document.getElementById('writeJudgeBox').style.display = 'flex';
+  }
+}
+
+function handleJudge(type, isCorrect) {
+  if (isCorrect) {
+    totalScore += 10;
+    document.getElementById('totalScore').textContent = totalScore;
+    
+    if (type === 'fill') {
+      if (fillIdx < curNums.length - 1) {
+        fillIdx++; resetUIState('fill'); refreshFill();
+      } else {
+        alert("🎉 대단해요! 이번 범위의 '빈칸채우기'를 모두 완료했습니다!");
+        resetUIState('fill'); refreshFill();
+      }
+    } else if (type === 'write') {
+      if (writeIdx < curNums.length - 1) {
+        writeIdx++; resetUIState('write'); refreshWrite();
+      } else {
+        alert("🎉 대단해요! 이번 범위의 '숫자보고쓰기'를 모두 완료했습니다!");
+        resetUIState('write'); refreshWrite();
+      }
+    }
+  } else {
+    // [버그 수정]: 다시 쓸래요 기능 작동 시 패스 상태 초기화 및 화면 가이드 원복 연동
+    if (type === 'fill') {
+      resetUIState('fill'); 
+      clearCvs('fill'); 
+      reGuide('fill', buildFillGuideFn(fillIdx, true)); // 기존 문제 빈칸 포지션 그대로 원복
+      startHintTimer('fill');
+    } else if (type === 'write') {
+      resetUIState('write'); 
+      clearCvs('write'); 
+      refreshWrite();
+    }
+  }
+}
+
+function showHint(type) {
+  if (type === 'fill') {
+    if (fillState.hintLevel >= fillSavedBlanks.length) {
+      alert("이미 모든 힌트가 공개되었습니다!");
+      return;
+    }
+    fillState.hintLevel++;
+    reGuide('fill', buildFillGuideFn(fillIdx, true));
+    redrawUserLines('fill');
+  }
+}
+
+// ══ CHALLENGE ══
+var DIFFS = [
+  {name:'매우쉬움',icon:'🌱',blanks:1, decoys:3, time:60,probs:5, color:'#27ae60'},
+  {name:'쉬움',   icon:'🌿',blanks:2, decoys:4, time:55,probs:6, color:'#2980b9'},
+  {name:'보통',   icon:'🌟',blanks:null,decoys:4,time:45,probs:7, color:'#f39c12'},
+  {name:'어려움', icon:'🔥',blanks:null,decoys:5,time:40,probs:8, color:'#e67e22'},
+  {name:'매우어려움',icon:'💀',blanks:null,decoys:6,time:30,probs:10,color:'#c0392b'}
+];
+var chS = {diffIdx:0,problems:[],probIdx:0,word:'',blankIdxs:[],nextSlot:0,cards:[],timer:null,startTime:0,timeLeft:0,totalTime:0};
+
+function startCh(diffIdx) {
+  var nick = document.getElementById('chNick').value.trim();
+  if (!nick) { alert('별명을 먼저 입력해요! ✏️'); document.getElementById('chNick').focus(); return; }
+  var d = DIFFS[diffIdx];
+  chS.diffIdx=diffIdx; chS.problems=shuffle(curNums).slice(0,d.probs);
+  chS.probIdx=0; chS.timeLeft=d.time; chS.totalTime=d.time; chS.startTime=Date.now();
+  clearInterval(chS.timer);
+  document.getElementById('chSetup').style.display='none';
+  document.getElementById('chGame').style.display='block';
+  document.getElementById('chResult').style.display='none';
+  document.getElementById('chNick').value = nick;
+  document.getElementById('chHudName').textContent='👤 '+nick;
+  var badge=document.getElementById('chHudDiff');
+  badge.textContent=d.icon+' '+d.name; badge.style.background=d.color;
+  document.getElementById('chTimerVal').textContent=d.time;
+  document.getElementById('chTimerFill').style.width='100%';
+  document.getElementById('chTimerFill').style.background='#4CAF50';
+  chS.timer=setInterval(function(){
+    chS.timeLeft--;
+    var pct=chS.timeLeft/chS.totalTime*100;
+    document.getElementById('chTimerVal').textContent=chS.timeLeft;
+    document.getElementById('chTimerFill').style.width=pct+'%';
+    var fill=document.getElementById('chTimerFill');
+    if(pct>50) fill.style.background='#4CAF50';
+    else if(pct>25) fill.style.background='#FF9800';
+    else fill.style.background='#f44336';
+    if(chS.timeLeft<=0){ clearInterval(chS.timer); endCh(false); }
+  },1000);
+  loadChProb();
+}
+
+function loadChProb() {
+  var d=DIFFS[chS.diffIdx];
+  document.getElementById('chHudProg').textContent=(chS.probIdx+1)+'/'+d.probs+' 문제';
+  var item=chS.problems[chS.probIdx];
+  chS.word=item.w;
+  document.getElementById('chBigNum').textContent=item.n;
+  var wordArr=item.w.split('');
+  var allIdxs=[]; for(var i=0;i<wordArr.length;i++){ if(wordArr[i]!=='-') allIdxs.push(i); }
+  var blankIdxs;
+  if(d.blanks===null){ blankIdxs=allIdxs.slice(); }
+  else {
+    blankIdxs=shuffle(allIdxs.slice()).slice(0,Math.min(d.blanks,allIdxs.length));
+    blankIdxs.sort(function(a,b){return a-b;});
+  }
+  chS.blankIdxs=blankIdxs; chS.nextSlot=0;
+
+  var slotsEl=document.getElementById('chSlots'); slotsEl.innerHTML='';
+  wordArr.forEach(function(ch,i){
+    if(ch==='-'){ var sp=document.createElement('div'); sp.style.width='6px'; slotsEl.appendChild(sp); return; }
+    var div=document.createElement('div');
+    var isBlank=blankIdxs.indexOf(i)>=0;
+    div.className='ch-slot'+(isBlank?(blankIdxs[0]===i?' active':' blank'):' shown');
+    div.dataset.pos=i;
+    div.textContent=isBlank?'':ch;
+    slotsEl.appendChild(div);
+  });
+
+  var neededLetters=blankIdxs.map(function(i){return wordArr[i];});
+  var alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  var decoyPool=shuffle(alphabet.filter(function(c){return neededLetters.indexOf(c)<0;}));
+  chS.cards=shuffle(neededLetters.concat(decoyPool.slice(0,d.decoys))).map(function(l){return{letter:l,used:false};});
+  var cardsEl=document.getElementById('chCards'); cardsEl.innerHTML='';
+  chS.cards.forEach(function(card,ci){
+    var btn=document.createElement('button');
+    btn.className='ch-card'; btn.textContent=card.letter;
+    btn.style.background=CARD_COLS[ci%CARD_COLS.length]; btn.style.color='#333';
+    btn.dataset.ci=ci;
+    (function(idx){ btn.addEventListener('click',function(){tapCard(idx);}); })(ci);
+    cardsEl.appendChild(btn);
+  });
+}
+
+function tapCard(ci) {
+  var card=chS.cards[ci]; if(card.used) return;
+  var needed=chS.word[chS.blankIdxs[chS.nextSlot]];
+  if(card.letter===needed){
+    card.used=true;
+    var pos=chS.blankIdxs[chS.nextSlot];
+    document.querySelectorAll('.ch-slot').forEach(function(el){
+      if(parseInt(el.dataset.pos)===pos){ el.textContent=card.letter; el.classList.remove('blank','active'); el.classList.add('filled'); }
+    });
+    var btn=document.querySelector('.ch-card[data-ci="'+ci+'"]');
+    if(btn) btn.classList.add('used');
+    chS.nextSlot++;
+    if(chS.nextSlot>=chS.blankIdxs.length){
+      setTimeout(function(){
+        chS.probIdx++;
+        if(chS.probIdx>=DIFFS[chS.diffIdx].probs){ clearInterval(chS.timer); endCh(true); }
+        else loadChProb();
+      },450);
+    } else {
+      var nextPos=chS.blankIdxs[chS.nextSlot];
+      document.querySelectorAll('.ch-slot').forEach(function(el){
+        el.classList.remove('active');
+        if(parseInt(el.dataset.pos)===nextPos) el.classList.add('active');
+      });
+    }
+  } else {
+    var btn2=document.querySelector('.ch-card[data-ci="'+ci+'"]');
+    if(btn2){ btn2.classList.add('wrong-shake'); setTimeout(function(){btn2.classList.remove('wrong-shake');},400); }
+  }
+}
+
+function endCh(success) {
+  document.getElementById('chGame').style.display='none';
+  document.getElementById('chResult').style.display='block';
+  document.getElementById('crNew').style.display='none';
+  var elapsed=((Date.now()-chS.startTime)/1000).toFixed(1);
+  var d=DIFFS[chS.diffIdx];
+  var nick=document.getElementById('chNick').value.trim();
+  if(success){
+    document.getElementById('crEmoji').textContent='🏆';
+    document.getElementById('crTitle').textContent='완성! 대단해요!';
+    document.getElementById('crSub').textContent=d.icon+' '+d.name+' | 총 '+elapsed+'초 완료 | '+d.probs+'문제';
+    saveRecord(nick,chS.diffIdx,parseFloat(elapsed),rangeIdx);
+  } else {
+    document.getElementById('crEmoji').textContent='⏰';
+    document.getElementById('crTitle').textContent='시간 초과! 다시 도전!';
+    document.getElementById('crSub').textContent=d.icon+' '+d.name+' | '+chS.probIdx+'/'+d.probs+' 완료';
+  }
+}
+function backChSetup() {
+  clearInterval(chS.timer);
+  document.getElementById('chSetup').style.display='block';
+  document.getElementById('chGame').style.display='none';
+  document.getElementById('chResult').style.display='none';
+}
+
+// ══ LEADERBOARD ══
+var DNAMES=['🌱 매우쉬움','🌿 쉬움','🌟 보통','🔥 어려움','💀 매우어려움'];
+var MEDALS=['🥇','🥈','🥉'], RCL=['gold','silver','bronze'];
+function saveRecord(name,diffIdx,elapsed,ri) {
+  var key=sanitizeKey(name);
+  var rec={name:name,diffIdx:diffIdx,elapsed:elapsed,range:RANGE_LBL[ri],date:new Date().toLocaleDateString('ko-KR'),ts:Date.now()};
+  if(fbReady&&db){
+    var ref=db.ref('writing_lb/'+diffIdx+'/'+key);
+    ref.once('value').then(function(snap){
+      var ex=snap.val();
+      if(!ex||elapsed<ex.elapsed){ ref.set(rec).then(function(){ document.getElementById('crNew').style.display='block'; }); }
+    });
+  } else {
+    var lk=diffIdx+'_'+key;
+    var all=JSON.parse(localStorage.getItem('wr_lb')||'{}');
+    if(!all[lk]||elapsed<all[lk].elapsed){ all[lk]=rec; localStorage.setItem('wr_lb',JSON.stringify(all)); document.getElementById('crNew').style.display='block'; }
+  }
+}
+function renderLBTable(el,records) {
+  if(!records.length){el.innerHTML='<div class="lb-empty">아직 기록이 없어요! 🎮</div>';return;}
+  var h='<table class="lb-table"><thead><tr><th>순위</th><th>별명</th><th>난이도</th><th>완료시간</th><th>범위</th><th>날짜</th></tr></thead><tbody>';
+  records.slice(0,30).forEach(function(r,i){
+    var rank=i<3?MEDALS[i]:(i+1); var rc=i<3?RCL[i]:'';
+    h+='<tr class="'+rc+'"><td>'+rank+'</td><td><b>'+r.name+'</b></td><td style="font-size:.7rem">'+DNAMES[r.diffIdx]+'</td><td><b style="color:#764ba2">'+r.elapsed+'초</b></td><td style="font-size:.7rem;color:#888">'+(r.range||'-')+'</td><td style="font-size:.68rem;color:#aaa">'+(r.date||'-')+'</td></tr>';
+  });
+  h+='</tbody></table>'; el.innerHTML=h;
+}
+function loadLB(el,f) {
+  el.innerHTML='<div class="lb-empty">⏳ 불러오는 중...</div>';
+  if(fbReady&&db){
+    var ref=f==='all'?db.ref('writing_lb'):db.ref('writing_lb/'+f);
+    ref.once('value').then(function(snap){
+      var raw=snap.val()||{}, rec=[];
+      if(f==='all'){ Object.values(raw).forEach(function(d){ if(typeof d==='object') Object.values(d).forEach(function(r){rec.push(r);}); }); }
+      else { Object.values(raw).forEach(function(r){rec.push(r);}); }
+      rec.sort(function(a,b){return a.diffIdx!==b.diffIdx?b.diffIdx-a.diffIdx:a.elapsed-b.elapsed;});
+      renderLBTable(el,rec);
+    }).catch(function(){el.innerHTML='<div class="lb-empty">❌ 불러오기 실패</div>';});
+  } else {
+    var all=JSON.parse(localStorage.getItem('wr_lb')||'{}');
+    var rec=Object.values(all);
+    if(f!=='all') rec=rec.filter(function(r){return String(r.diffIdx)===f;});
+    rec.sort(function(a,b){return a.diffIdx!==b.diffIdx?b.diffIdx-a.diffIdx:a.elapsed-b.elapsed;});
+    renderLBTable(el,rec);
+  }
+}
+function lbFlt(e,f) {
+  lbCurFilter=f;
+  document.querySelectorAll('#lbFilterWrap button').forEach(function(b){b.classList.remove('active');});
+  e.target.classList.add('active');
+  loadLB(document.getElementById('lbContent'),f);
+}
+function refreshLB() { loadLB(document.getElementById('lbContent'),lbCurFilter); }
+</script>
+</body>
+</html>
