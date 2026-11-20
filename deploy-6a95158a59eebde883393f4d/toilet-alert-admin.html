@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>화장실 알리미 - 교감용 모니터</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    background: #0f172a;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+  }
+  header { text-align: center; margin-bottom: 30px; }
+  header h1 { color: #f1f5f9; font-size: 28px; font-weight: 700; }
+  header p { color: #64748b; font-size: 14px; margin-top: 4px; }
+  .time-display { color: #94a3b8; font-size: 13px; margin-top: 6px; }
+
+  .popup-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.75);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .popup-overlay.show { display: flex; }
+  .popup-card {
+    background: white; border-radius: 28px; padding: 50px 50px 40px;
+    text-align: center; max-width: 440px; width: 90%;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+  @keyframes popIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+  .popup-icon    { font-size: 80px; margin-bottom: 16px; display: block; }
+  .popup-type    { font-size: 36px; font-weight: 800; margin-bottom: 8px; }
+  .popup-type.toilet { color: #1d4ed8; }
+  .popup-type.health { color: #059669; }
+  .popup-type.other  { color: #d97706; }
+  .popup-message { font-size: 20px; color: #475569; margin-bottom: 6px; }
+  .popup-meta    { font-size: 15px; color: #94a3b8; margin-bottom: 28px; }
+  .popup-close {
+    background: #f1f5f9; border: none; padding: 14px 40px;
+    border-radius: 12px; font-size: 16px; font-weight: 600;
+    color: #475569; cursor: pointer; transition: background 0.15s;
+  }
+  .popup-close:hover { background: #e2e8f0; }
+
+  .confirm-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center;
+    z-index: 2000;
+  }
+  .confirm-overlay.show { display: flex; }
+  .confirm-card {
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 20px; padding: 36px 40px;
+    text-align: center; max-width: 360px; width: 90%;
+    animation: popIn 0.25s ease;
+  }
+  .confirm-card .c-icon  { font-size: 48px; margin-bottom: 12px; display: block; }
+  .confirm-card .c-title { font-size: 20px; font-weight: 700; color: #f1f5f9; margin-bottom: 8px; }
+  .confirm-card .c-desc  { font-size: 14px; color: #94a3b8; margin-bottom: 28px; line-height: 1.6; }
+  .confirm-btns { display: flex; gap: 12px; justify-content: center; }
+  .confirm-btns button {
+    padding: 12px 28px; border-radius: 10px; font-size: 15px;
+    font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s;
+  }
+  .confirm-btns button:hover { opacity: 0.85; }
+  .btn-cancel-confirm { background: #334155; color: #cbd5e1; }
+  .btn-delete-confirm { background: #ef4444; color: white; }
+
+  .log-container { width: 100%; max-width: 700px; }
+  .log-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 14px;
+  }
+  .log-header h2 { color: #cbd5e1; font-size: 16px; font-weight: 600; }
+  .clear-btn {
+    background: #1e293b; border: 1px solid #334155;
+    color: #94a3b8; padding: 6px 14px;
+    border-radius: 8px; font-size: 13px; cursor: pointer;
+  }
+  .clear-btn:hover { background: #334155; }
+  .log-list { display: flex; flex-direction: column; gap: 10px; }
+  .log-item {
+    border-radius: 16px; padding: 16px 20px;
+    display: flex; align-items: center; gap: 16px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(-20px); opacity: 0; }
+    to   { transform: translateX(0);     opacity: 1; }
+  }
+  .log-item.toilet { background: #1e3a5f; border-left: 5px solid #3b82f6; }
+  .log-item.health { background: #064e3b; border-left: 5px solid #10b981; }
+  .log-item.other  { background: #451a03; border-left: 5px solid #f59e0b; }
+  .log-icon { font-size: 32px; flex-shrink: 0; }
+  .log-info { flex: 1; }
+  .log-main { font-size: 18px; font-weight: 700; color: #f1f5f9; }
+  .log-sub  { font-size: 13px; color: #94a3b8; margin-top: 3px; }
+  .log-time { color: #64748b; font-size: 13px; text-align: right; white-space: nowrap; }
+  .log-time .log-date { display: block; color: #475569; font-size: 12px; margin-bottom: 2px; }
+  .empty-state {
+    text-align: center; color: #334155;
+    padding: 60px 20px; font-size: 15px;
+  }
+  .empty-state .empty-icon { font-size: 48px; display: block; margin-bottom: 10px; }
+  .connection-dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; background: #ef4444;
+    margin-right: 6px; vertical-align: middle;
+  }
+  .connection-dot.connected { background: #10b981; animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+  .conn-status { color: #64748b; font-size: 13px; margin-top: 8px; }
+
+  /* TTS 상태 표시 */
+  .tts-status {
+    display: inline-block; margin-top: 8px;
+    font-size: 12px; color: #475569;
+    background: #1e293b; border: 1px solid #334155;
+    padding: 4px 12px; border-radius: 20px;
+  }
+  .tts-status.speaking { color: #10b981; border-color: #10b981; animation: pulse 1s infinite; }
+</style>
+</head>
+<body>
+
+<!-- 알림 팝업 -->
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup-card">
+    <span class="popup-icon" id="popupIcon">🚻</span>
+    <div class="popup-type" id="popupType">화장실</div>
+    <div class="popup-message" id="popupMessage">화장실 알림이 왔습니다.</div>
+    <div class="popup-meta" id="popupMeta"></div>
+    <button class="popup-close" onclick="closePopup()">확인</button>
+  </div>
+</div>
+
+<!-- 삭제 확인 팝업 -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-card">
+    <span class="c-icon">🗑️</span>
+    <div class="c-title">기록을 삭제하시겠습니까?</div>
+    <div class="c-desc">삭제된 기록은 화면에서 사라지며<br>새로고침 후에도 복원되지 않습니다.</div>
+    <div class="confirm-btns">
+      <button class="btn-cancel-confirm" onclick="closeConfirm()">취소</button>
+      <button class="btn-delete-confirm" onclick="confirmClear()">삭제</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <h1>🏫 화장실 알리미 모니터</h1>
+  <p>교감용 — 실시간 알림을 확인하세요</p>
+  <div class="conn-status">
+    <span class="connection-dot" id="connDot"></span>
+    <span id="connText">연결 중...</span>
+  </div>
+  <div class="tts-status" id="ttsStatus">🔊 TTS 대기 중</div>
+  <div class="time-display" id="timeDisplay"></div>
+</header>
+
+<div class="log-container">
+  <div class="log-header">
+    <h2>📋 오늘 알림 기록</h2>
+    <button class="clear-btn" onclick="openConfirm()">🗑️ 기록 지우기</button>
+  </div>
+  <div class="log-list" id="logList">
+    <div class="empty-state" id="emptyState">
+      <span class="empty-icon">🔔</span>
+      아직 알림이 없습니다.<br>알림이 오면 여기에 표시됩니다.
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 날짜/시간 포맷 ──────────────────────────────────────────────
+function getDateStr() {
+  const now = new Date();
+  return now.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+function getTimeStr() {
+  const now = new Date();
+  return now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+function getNowMeta() {
+  return { date: getDateStr(), time: getTimeStr() };
+}
+
+// ── TTS (Web Speech API) ─────────────────────────────────────────
+function speakTTS(text) {
+  if (!('speechSynthesis' in window)) {
+    console.warn('이 브라우저는 TTS를 지원하지 않습니다.');
+    return;
+  }
+  window.speechSynthesis.cancel(); // 이전 발화 중단
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang  = 'ko-KR';
+  utter.rate  = 0.9;   // 속도 (0.1~10, 1=보통)
+  utter.pitch = 1.0;   // 음높이
+  utter.volume = 1.0;  // 볼륨 최대
+
+  const statusEl = document.getElementById('ttsStatus');
+  utter.onstart = () => {
+    statusEl.textContent = '🔊 ' + text;
+    statusEl.classList.add('speaking');
+  };
+  utter.onend = () => {
+    statusEl.textContent = '🔊 TTS 대기 중';
+    statusEl.classList.remove('speaking');
+  };
+
+  // 한국어 목소리 우선 선택
+  function doSpeak() {
+    const voices = window.speechSynthesis.getVoices();
+    const koVoice = voices.find(v => v.lang === 'ko-KR');
+    if (koVoice) utter.voice = koVoice;
+    window.speechSynthesis.speak(utter);
+  }
+
+  if (window.speechSynthesis.getVoices().length > 0) {
+    doSpeak();
+  } else {
+    window.speechSynthesis.onvoiceschanged = doSpeak;
+  }
+}
+
+// ── 타입 설정 ────────────────────────────────────────────────────
+const typeConfig = {
+  '화장실': { icon: '🚻', color: 'toilet', msg: '화장실 알림이 왔습니다.' },
+  '보건실': { icon: '🏥', color: 'health', msg: '보건실 알림이 왔습니다.' },
+  '기타':   { icon: '📢', color: 'other',  msg: '기타 알림이 왔습니다.'  }
+};
+
+// ── 팝업 큐 ──────────────────────────────────────────────────────
+let popupQueue  = [];
+let isPopupOpen = false;
+
+function showPopup(data) {
+  const cfg = typeConfig[data.type] || typeConfig['기타'];
+  document.getElementById('popupIcon').textContent    = cfg.icon;
+  document.getElementById('popupType').textContent    = data.type;
+  document.getElementById('popupType').className      = 'popup-type ' + cfg.color;
+  document.getElementById('popupMessage').textContent = cfg.msg;
+  document.getElementById('popupMeta').textContent    =
+    (data.className || '') + ' · ' + (data.date || '') + ' ' + (data.time || '');
+  document.getElementById('popupOverlay').classList.add('show');
+  isPopupOpen = true;
+
+  // TTS 발화: "3학년 1반 화장실 알림이 왔습니다."
+  const ttsText = (data.className || '') + ' ' + cfg.msg;
+  speakTTS(ttsText);
+}
+
+function closePopup() {
+  document.getElementById('popupOverlay').classList.remove('show');
+  isPopupOpen = false;
+  if (popupQueue.length > 0) {
+    setTimeout(() => showPopup(popupQueue.shift()), 400);
+  }
+}
+
+document.getElementById('popupOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closePopup();
+});
+
+// ── 삭제 확인 팝업 ───────────────────────────────────────────────
+function openConfirm()  { document.getElementById('confirmOverlay').classList.add('show'); }
+function closeConfirm() { document.getElementById('confirmOverlay').classList.remove('show'); }
+
+function confirmClear() {
+  localStorage.setItem('alertClearedAt', Date.now().toString());
+  logItems = [];
+  renderLogList([]);
+  closeConfirm();
+}
+
+// ── 로그 ─────────────────────────────────────────────────────────
+let logItems = [];
+
+function renderLogList(items) {
+  const list = document.getElementById('logList');
+  list.innerHTML = '';
+  if (items.length === 0) {
+    list.innerHTML = '<div class="empty-state"><span class="empty-icon">🔔</span>아직 알림이 없습니다.<br>알림이 오면 여기에 표시됩니다.</div>';
+    return;
+  }
+  items.forEach(({ data }) => {
+    const cfg  = typeConfig[data.type] || typeConfig['기타'];
+    const item = document.createElement('div');
+    item.className = 'log-item ' + cfg.color;
+    item.innerHTML = `
+      <span class="log-icon">${cfg.icon}</span>
+      <div class="log-info">
+        <div class="log-main">${cfg.msg}</div>
+        <div class="log-sub">${data.className || ''}</div>
+      </div>
+      <div class="log-time">
+        <span class="log-date">${data.date || ''}</span>
+        ${data.time || ''}
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+function addLogItem(key, data, isNew) {
+  if (logItems.find(i => i.key === key)) return;
+  logItems.unshift({ key, data });
+  renderLogList(logItems);
+  if (isNew) {
+    if (isPopupOpen) { popupQueue.push(data); }
+    else             { showPopup(data); }
+  }
+}
+
+// ── 시계 ─────────────────────────────────────────────────────────
+function updateTime() {
+  document.getElementById('timeDisplay').textContent =
+    new Date().toLocaleString('ko-KR', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    });
+}
+setInterval(updateTime, 1000);
+updateTime();
+</script>
+
+<script type="module">
+  import { initializeApp }  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onChildAdded, query, orderByChild, limitToLast }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ★ 아래 Firebase 설정을 본인 프로젝트 설정으로 교체하세요 ★
+  const firebaseConfig = {
+    apiKey:            "YOUR_API_KEY",
+    authDomain:        "YOUR_PROJECT.firebaseapp.com",
+    databaseURL:       "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+    projectId:         "YOUR_PROJECT_ID",
+    storageBucket:     "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId:             "YOUR_APP_ID"
+  };
+
+  try {
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
+    document.getElementById('connDot').classList.add('connected');
+    document.getElementById('connText').textContent = 'Firebase 연결됨';
+
+    const clearedAt = parseInt(localStorage.getItem('alertClearedAt') || '0');
+    const alertsRef = query(ref(db, 'alerts'), orderByChild('timestamp'), limitToLast(100));
+
+    let isInitialLoad = true;
+    setTimeout(() => { isInitialLoad = false; }, 2000);
+
+    onChildAdded(alertsRef, (snapshot) => {
+      const key  = snapshot.key;
+      const data = snapshot.val();
+      const ts   = data.timestamp || 0;
+      if (ts <= clearedAt) return;
+
+      // 저장된 시간 정보가 없으면 현재 시각으로 보완
+      if (!data.time) {
+        const d = ts ? new Date(ts) : new Date();
+        data.date = d.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        data.time = d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+      }
+
+      addLogItem(key, data, !isInitialLoad);
+    });
+
+  } catch(e) {
+    document.getElementById('connText').textContent = 'Firebase 설정 오류 — firebaseConfig를 교체해주세요';
+    console.error(e);
+  }
+</script>
+</body>
+</html>
